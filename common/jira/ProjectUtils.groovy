@@ -52,29 +52,42 @@ public class ProjectUtils {
         Project createdProject = null
         CreateProjectValidationResult validationResult = null
 
-        if (source) {
-            validationResult = projectService.validateCreateProjectBasedOnExistingProject(globalAdmin, source.id, creationData)
-        } else {
-            validationResult = projectService.validateCreateProject(globalAdmin, creationData)
+        def wantedKey = creationData.key
+        def wantedName = creationData.name
+
+        if (wantedKey.length() > projectService.maximumKeyLength) {
+            errorCollector.addErrorMessage("Project key must be lower than ${projectService.maximumKeyLength}")
         }
 
-        if (validationResult && validationResult.isValid()) {
-            createdProject = projectService.createProject(validationResult)
+        if (wantedName.length() > projectService.maximumNameLength) {
+            errorCollector.addErrorMessage("Project name must be lower than ${projectService.maximumNameLength}")
+        }
 
-            def activeAdmins = projectAdmins.find { it.active == true }
-            def nonActiveAdmins = projectAdmins.minus(activeAdmins)
-            nonActiveAdmins.each { user ->
-                warningCollector.addWarning("${user.username} was not added because he/she is inactive")
+        if (!errorCollector.hasAnyErrors()) {
+            if (source) {
+                validationResult = projectService.validateCreateProjectBasedOnExistingProject(globalAdmin, source.id, creationData)
+            } else {
+                validationResult = projectService.validateCreateProject(globalAdmin, creationData)
             }
 
-            projectRoleService.addActorsToProjectRole(
-                activeAdmins*.username, 
-                ADMIN_PROJECT_ROLE, 
-                createdProject, 
-                ProjectRoleActor.USER_ROLE_ACTOR_TYPE, 
-                errorCollector)
-        } else {
-            errorCollector.addErrorCollection(validationResult.errorCollection)
+            if (validationResult && validationResult.isValid()) {
+                createdProject = projectService.createProject(validationResult)
+
+                def activeAdmins = projectAdmins.find { it.active == true }
+                def nonActiveAdmins = projectAdmins.minus(activeAdmins)
+                nonActiveAdmins.each { user ->
+                    warningCollector.addWarning("${user.username} was not added because he/she is inactive")
+                }
+
+                projectRoleService.addActorsToProjectRole(
+                    activeAdmins*.username, 
+                    ADMIN_PROJECT_ROLE, 
+                    createdProject, 
+                    ProjectRoleActor.USER_ROLE_ACTOR_TYPE, 
+                    errorCollector)
+            } else {
+                errorCollector.addErrorCollection(validationResult.errorCollection)
+            }
         }
 
         return new CreateProjectOutcome(errorCollector, warningCollector, createdProject)
