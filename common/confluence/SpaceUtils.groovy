@@ -12,6 +12,8 @@ import com.atlassian.jira.util.WarningCollection
 import com.atlassian.jira.util.ErrorCollection
 import com.atlassian.jira.util.SimpleErrorCollection
 import com.atlassian.jira.bc.ServiceOutcome
+import com.atlassian.jira.component.ComponentAccessor
+import com.atlassian.crowd.embedded.api.Group
 
 class SpaceUtils {
 
@@ -26,18 +28,60 @@ class SpaceUtils {
             requestBody.put(description, description)
         }
 
-        def response = AppLink.doRequest("/rest/space", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
+        def response = AppLink.doRequest("rest/space", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
         if (response.statusCode != HttpURLConnection.HTTP_OK) {
             errorCollector.addErrorMessage(response.getResponseBodyAsString())
         } else {
             def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString)
             spaceInfo.setName((String)responseAsJson['name'])
             spaceInfo.setKey((String)responseAsJson['key'])
-            spaceInfo.setDescription((String)responseAsJson['description'])
+            if (description) {
+                spaceInfo.setDescription((String)responseAsJson['description'])
+            }
             def homePage = responseAsJson['homePage']['items'] as List<Map>
             spaceInfo.setHomePage(homePage[0])
+
+            spaceAdmins.each { admin ->
+                def adminsRequestBody = [jsonrpc: "2.0", method: "addPermissionToSpace", params: ["SETSPACEPERMISSIONS", admin.username, spaceKey], id: 1]
+                def adminsResponse = AppLink.doRequest("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(adminsRequestBody).toString(), Request.MethodType.POST)
+            }
+
         }
         return new SpaceOutcome(errorCollector, null, spaceInfo)
+    }
+
+    /**
+     * List of administrators of a given Confluence space
+     * Take note that the groups and users must also be visible in Jira (Crowd or otherwise)
+     * 
+     * @param spaceKey Key of the space
+     * @param groupsToExclude Optional. If you wish to exclude users coming from groups, like confluence-administrators
+     *
+     * @return a list of users, either individuals or members of groups
+    */
+    List<ApplicationUser> adminsForSpace(@NonNull String spaceKey, Group... groupsToExclude) {
+        def admins = [] as ArrayList<ApplicationUser>
+        
+        def requestBody = [jsonrpc: "2.0", method: "getSpacePermissionSet", params: [spaceKey, "SETSPACEPERMISSIONS"], id: 1]
+        def response = AppLink.doRequest("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
+        
+        def permsSet = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+        def perms = permsSet["spacePermissions"] as List
+        perms.each { permission ->
+            def userName = permission['userName'] as String
+            if (userName) {
+                def user = ComponentAccessor.userManager.getUserByName(userName)
+                admins.add(user)
+            }
+            def groupName = permission['groupName'] as String
+            if (groupName) {
+                def group = ComponentAccessor.groupManager.getGroup(groupName)
+                if (group && (!groupsToExclude || !groupsToExclude.contains(group))) {
+                    admins.addAll(ComponentAccessor.groupManager.getUsersInGroup(group))
+                }
+            }
+        }
+        return admins
     }
 
     class SpaceInfo {

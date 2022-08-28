@@ -3,7 +3,7 @@ package common.Confluence
 import com.atlassian.applinks.api.ApplicationLink
 import com.atlassian.applinks.api.ApplicationLinkService
 import com.atlassian.applinks.api.application.confluence.ConfluenceApplicationType
-import com.atlassian.sal.api.component.ComponentLocator
+import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.sal.api.net.Request 
 import com.atlassian.sal.api.net.Response
 import com.atlassian.sal.api.net.ResponseException
@@ -14,7 +14,7 @@ import org.springframework.lang.NonNull
 class AppLink {
 
     static ApplicationLink getPrimaryConfluenceLink() {
-        def applicationLinkService = ComponentLocator.getComponent(ApplicationLinkService)
+        def applicationLinkService = ComponentAccessor.getComponent(ApplicationLinkService)
         final ApplicationLink conflLink = applicationLinkService.getPrimaryApplicationLink(ConfluenceApplicationType)
     }
 
