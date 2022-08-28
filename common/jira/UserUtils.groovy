@@ -8,6 +8,7 @@ import com.atlassian.jira.user.ApplicationUser
 import com.atlassian.jira.project.Project
 import com.atlassian.jira.project.type.ProjectTypeKeys
 import com.atlassian.jira.security.roles.ProjectRoleManager
+import org.springframework.lang.NonNull
 
 public class UserUtils {
 
@@ -17,15 +18,15 @@ public class UserUtils {
     static ApplicationAuthorizationService appAuthService = ComponentAccessor.getComponent(ApplicationAuthorizationService)
     static ProjectRoleManager projectRoleManager = ComponentAccessor.getComponent(ProjectRoleManager)
 
-    public boolean haveSoftwareLicense(ApplicationUser user) {
+    public boolean haveSoftwareLicense(@NonNull ApplicationUser user) {
         return haveLicence(user, ApplicationKeys.CORE)
     }
 
-    public boolean haveServiceManagementLicense(ApplicationUser user) {
+    public boolean haveServiceManagementLicense(@NonNull ApplicationUser user) {
         return haveLicence(user, ApplicationKeys.SERVICE_DESK)
     }
 
-    public boolean haveCoreLicense(ApplicationUser user) {
+    public boolean haveCoreLicense(@NonNull ApplicationUser user) {
         return haveLicence(user, ApplicationKeys.CORE)
     }
 
@@ -36,7 +37,7 @@ public class UserUtils {
         return appAuthService.canUseApplication(user, applicationType)
     }
 
-    public boolean haveAccessToProject(ApplicationUser user, Project project) {
+    public boolean haveAccessToProject(@NonNull ApplicationUser user, @NonNull Project project) {
         def haveAccess = false
         switch (project.projectTypeKey.key) {
             case ProjectTypeKeys.SOFTWARE:

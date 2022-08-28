@@ -17,6 +17,7 @@ import com.atlassian.jira.security.roles.ProjectRoleActor
 import com.atlassian.jira.bc.ServiceOutcome
 import com.atlassian.jira.util.SimpleWarningCollection
 import com.atlassian.jira.util.WarningCollection
+import com.atlassian.crowd.embedded.api.Group
 
 public class ProjectUtils {
 
@@ -93,7 +94,7 @@ public class ProjectUtils {
         return new CreateProjectOutcome(errorCollector, warningCollector, createdProject)
     }
 
-    boolean archiveProject(ApplicationUser globalAdmin, Project project) {
+    boolean archiveProject(@NonNull ApplicationUser globalAdmin, @NonNull Project project) {
         def validationResult = archiveProjectService.validateArchiveProject(globalAdmin, project.key)
         if (validationResult.isValid()) {
             def result = archiveProjectService.archiveProject(validationResult)
@@ -102,7 +103,7 @@ public class ProjectUtils {
         return false
     }
 
-    boolean unarchiveProject(ApplicationUser globalAdmin, Project project) {
+    boolean unarchiveProject(@NonNull ApplicationUser globalAdmin, @NonNull Project project) {
         def validationResult = archiveProjectService.validateRestoreProject(globalAdmin, project.key)
         if (validationResult.isValid()) {
             def result = archiveProjectService.restoreProject(validationResult)
@@ -111,7 +112,29 @@ public class ProjectUtils {
         return false
     }
 
-    public class CreateProjectOutcome implements ServiceOutcome {
+    List<ApplicationUser> adminsForProject(@NonNull Project project, Group... groupsToExcludes) {
+        return usersForProjectAndRole(project, ADMIN_PROJECT_ROLE, groupsToExcludes)
+    }
+
+    List<ApplicationUser> usersForProjectAndRole(@NonNull Project project, @NonNull ProjectRole projectRole, Group... groupsToExcludes) {
+        def users = [] as ArrayList<ApplicationUser>
+        def errorCollector = new SimpleErrorCollection()
+        def actors = projectRoleService.getProjectRoleActors(projectRole, project, errorCollector)
+        actors.getRoleActorsByType(ProjectRoleActor.USER_ROLE_ACTOR_TYPE).each { actor ->
+            users.addAll(actor.getUsers())
+        }
+        actors.getRoleActorsByType(ProjectRoleActor.GROUP_ROLE_ACTOR_TYPE).each { actor ->
+            def group = ComponentAccessor.groupManager.getGroup(actor.getParameter())
+            if (!groupsToExcludes) {
+                if (!groupsToExcludes.contains(group)) {
+                    users.addAll(actor.getUsers())
+                }
+            }
+        }
+        return users
+    }
+
+    class CreateProjectOutcome implements ServiceOutcome {
         protected ErrorCollection errorCollection
         protected WarningCollection warningCollection
         protected Project project

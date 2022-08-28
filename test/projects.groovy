@@ -17,4 +17,7 @@ if (outcome.isValid()) {
     if (isSuccess) {
         projectUtils.unarchiveProject(adminUser, project)
     }
+    def adminGroup = ComponentAccessor.groupManager.getGroup("jira-administrators")
+    def admins = projectUtils.adminsForProject(project,adminGroup)
+    log.warn admins
 }
