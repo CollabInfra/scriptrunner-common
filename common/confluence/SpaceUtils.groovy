@@ -14,6 +14,7 @@ import com.atlassian.jira.util.SimpleErrorCollection
 import com.atlassian.jira.bc.ServiceOutcome
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.crowd.embedded.api.Group
+import common.confluence.AppLink
 
 class SpaceUtils {
 
