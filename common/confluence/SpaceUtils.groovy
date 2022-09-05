@@ -15,7 +15,9 @@ import com.atlassian.jira.bc.ServiceOutcome
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.crowd.embedded.api.Group
 import common.confluence.AppLink
+import groovy.util.logging.Log4j
 
+@Log4j
 class SpaceUtils {
 
     public SpaceUtils() {}
@@ -29,7 +31,7 @@ class SpaceUtils {
             requestBody.put(description, description)
         }
 
-        def response = AppLink.doRequest("rest/space", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
+        def response = AppLink.doRequest("rest/api/space", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
         if (response.statusCode != HttpURLConnection.HTTP_OK) {
             errorCollector.addErrorMessage(response.getResponseBodyAsString())
         } else {
@@ -39,8 +41,10 @@ class SpaceUtils {
             if (description) {
                 spaceInfo.setDescription((String)responseAsJson['description'])
             }
-            def homePage = responseAsJson['homePage']['items'] as List<Map>
-            spaceInfo.setHomePage(homePage[0])
+            def homePageMap = responseAsJson['homepage'] as Map
+            log.warn homePageMap
+            def homePage = [id: homePageMap['id'], title: homePageMap['title'], link: homePageMap['_links']['webui']]
+            spaceInfo.setHomePage(homePage)
 
             spaceAdmins.each { admin ->
                 def adminsRequestBody = [jsonrpc: "2.0", method: "addPermissionToSpace", params: ["SETSPACEPERMISSIONS", admin.username, spaceKey], id: 1]
@@ -65,9 +69,8 @@ class SpaceUtils {
         
         def requestBody = [jsonrpc: "2.0", method: "getSpacePermissionSet", params: [spaceKey, "SETSPACEPERMISSIONS"], id: 1]
         def response = AppLink.doRequest("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
-        
         def permsSet = new JsonSlurper().parseText(response.responseBodyAsString) as Map
-        def perms = permsSet["spacePermissions"] as List
+        def perms = permsSet["result"]["spacePermissions"] as List
         perms.each { permission ->
             def userName = permission['userName'] as String
             if (userName) {
