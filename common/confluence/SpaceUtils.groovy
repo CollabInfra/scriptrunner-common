@@ -31,7 +31,7 @@ class SpaceUtils {
             requestBody.put(description, description)
         }
 
-        def response = AppLink.doRequest("rest/api/space", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
+        def response = AppLink.doRequestWithBody("rest/api/space", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
         if (response.statusCode != HttpURLConnection.HTTP_OK) {
             errorCollector.addErrorMessage(response.getResponseBodyAsString())
         } else {
@@ -39,18 +39,94 @@ class SpaceUtils {
             spaceInfo.setName((String)responseAsJson['name'])
             spaceInfo.setKey((String)responseAsJson['key'])
             if (description) {
-                spaceInfo.setDescription((String)responseAsJson['description'])
+                spaceInfo.setDescription(description)
             }
             def homePageMap = responseAsJson['homepage'] as Map
-            log.warn homePageMap
             def homePage = [id: homePageMap['id'], title: homePageMap['title'], link: homePageMap['_links']['webui']]
             spaceInfo.setHomePage(homePage)
 
             spaceAdmins.each { admin ->
                 def adminsRequestBody = [jsonrpc: "2.0", method: "addPermissionToSpace", params: ["SETSPACEPERMISSIONS", admin.username, spaceKey], id: 1]
-                def adminsResponse = AppLink.doRequest("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(adminsRequestBody).toString(), Request.MethodType.POST)
+                def adminsResponse = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(adminsRequestBody).toString(), Request.MethodType.POST)
             }
 
+        }
+        return new SpaceOutcome(errorCollector, null, spaceInfo)
+    }
+
+    /**
+     * Return a list of spaces. By default, it will return 25 spaces, of type GLOBAL, and of status CURRENT
+     * 
+     * @param spaceStatus CURRENT or ARCHIVED
+     * @param spaceType GLOBAL or PERSONAL 
+     * @param startAt The start point of the collection to return (pagination)
+     * @param limit The limit of the number of spaces to return (pagination)
+     * @param spacesKey Optional. List of space keys to filter the search on
+     *
+     * @return a list of spaces found by the request
+    */
+    List<SpaceOutcome> getSpaces(SpaceStatus spaceStatus = SpaceStatus.CURRENT, SpaceType spaceType = SpaceType.GLOBAL, Integer startAt = 0, Integer pagerLimit = 25, String... spacesKey) {
+        def errorCollector = new SimpleErrorCollection()
+        def queryParams = [:]
+        def spaces = [] as ArrayList<SpaceOutcome>
+
+        if (spaceStatus) {
+            queryParams.put("status", spaceStatus.value)
+        }
+        if (spaceType) {
+            queryParams.put("type", spaceType.value)
+        }
+        if (spacesKey) {
+            def counter = 1
+            spacesKey.each { key ->
+                queryParams.put("spaceKey${counter}", key)
+                counter++
+            }
+        }
+        queryParams.put("start", startAt)
+        queryParams.put("limit", pagerLimit)
+        
+        def queryKeys = queryParams.collect{ it }.join("&").replaceAll("spaceKey[0-9]+","spaceKey")
+
+        def response = AppLink.doRequestWithoutBody("rest/api/space?${queryKeys}", Request.MethodType.GET)
+        if (response.statusCode != HttpURLConnection.HTTP_OK) {
+            errorCollector.addErrorMessage(response.getResponseBodyAsString())
+        } else {
+            def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+            def results = responseAsJson['results'] as List<Map>
+            results.each { result ->
+                def spaceInfo = getSpace(result['key'] as String)
+                spaces.add(spaceInfo)
+            }
+        }
+        return spaces
+    }
+
+    /**
+     * Return a space, by its key
+     * 
+     * @param spaceKey Key of the space
+     *
+     * @return info about the space
+    */
+    SpaceOutcome getSpace(String spaceKey) {
+        def spaceInfo = new SpaceInfo()
+        def errorCollector = new SimpleErrorCollection()
+        def queryParams = [:]
+        def spaces = [] as ArrayList<SpaceInfo>
+        
+        def response = AppLink.doRequestWithoutBody("rest/api/space/${spaceKey}?expand=homepage,description.plain", Request.MethodType.GET)
+        if (response.statusCode != HttpURLConnection.HTTP_OK) {
+            errorCollector.addErrorMessage(response.getResponseBodyAsString())
+        } else {
+            def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+            spaceInfo.setId(responseAsJson['id'] as Integer)
+            spaceInfo.setName(responseAsJson['name'] as String)
+            spaceInfo.setKey(responseAsJson['key'] as String)
+            spaceInfo.setDescription(responseAsJson['description']['plain']['value'] as String)
+            def homePageMap = responseAsJson['homepage'] as Map
+            def homePage = [id: homePageMap['id'], title: homePageMap['title'], link: homePageMap['_links']['webui']]
+            spaceInfo.setHomePage(homePage)
         }
         return new SpaceOutcome(errorCollector, null, spaceInfo)
     }
@@ -68,7 +144,7 @@ class SpaceUtils {
         def admins = [] as ArrayList<ApplicationUser>
         
         def requestBody = [jsonrpc: "2.0", method: "getSpacePermissionSet", params: [spaceKey, "SETSPACEPERMISSIONS"], id: 1]
-        def response = AppLink.doRequest("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
+        def response = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
         def permsSet = new JsonSlurper().parseText(response.responseBodyAsString) as Map
         def perms = permsSet["result"]["spacePermissions"] as List
         perms.each { permission ->
@@ -88,12 +164,59 @@ class SpaceUtils {
         return admins
     }
 
+    enum SpaceType {
+        GLOBAL('global'),
+        PERSONAL('personal')
+
+        final String value
+
+        SpaceType(String value) {
+            this.value = value
+        }
+
+        String getValue() {
+            return this.value
+        }
+
+        String toString(){
+            value
+        }
+
+        String getKey() {
+            name()
+        }
+    }
+
+    enum SpaceStatus {
+        CURRENT('current'),
+        ARCHIVED('archived')
+
+        final String value
+
+        SpaceStatus(String value) {
+            this.value = value
+        }
+
+        String getValue() {
+            return this.value
+        }
+
+        String toString(){
+            value
+        }
+
+        String getKey() {
+            name()
+        }
+    }
+
     class SpaceInfo {
         String name
         String key
         List<ApplicationUser> admins
         String description
         Map homePage
+        Integer id
     }
 
     class SpaceOutcome implements ServiceOutcome {
