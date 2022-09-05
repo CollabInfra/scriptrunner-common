@@ -23,12 +23,26 @@ class AppLink {
         def authenticatedRequestFactory = confluenceLink.createImpersonatingAuthenticatedRequestFactory()
     }
 
-    static Response doRequest(@NonNull String requestUri, String requestBody, @NonNull Request.MethodType httpVerb) {
+    static Response doRequestWithBody(@NonNull String requestUri, String requestBody, @NonNull Request.MethodType httpVerb) {
         Response responseFromRequest = null
         authenticatedRequestFactory()
             .createRequest(httpVerb, requestUri)
             .addHeader("Content-Type", "application/json")
             .setRequestBody(requestBody)
+            .execute(new ResponseHandler<Response>() {
+                @Override
+                void handle(Response response) throws ResponseException {
+                    responseFromRequest = response
+                }
+            })
+        return responseFromRequest
+    }
+
+    static Response doRequestWithoutBody(@NonNull String requestUri, @NonNull Request.MethodType httpVerb) {
+        Response responseFromRequest = null
+        authenticatedRequestFactory()
+            .createRequest(httpVerb, requestUri)
+            .addHeader("Content-Type", "application/json")
             .execute(new ResponseHandler<Response>() {
                 @Override
                 void handle(Response response) throws ResponseException {
