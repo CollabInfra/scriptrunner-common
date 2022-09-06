@@ -109,7 +109,7 @@ class SpaceUtils {
      *
      * @return info about the space
     */
-    SpaceOutcome getSpace(String spaceKey) {
+    SpaceOutcome getSpace(@NonNull String spaceKey) {
         def spaceInfo = new SpaceInfo()
         def errorCollector = new SimpleErrorCollection()
         def queryParams = [:]
@@ -129,6 +129,56 @@ class SpaceUtils {
             spaceInfo.setHomePage(homePage)
         }
         return new SpaceOutcome(errorCollector, null, spaceInfo)
+    }
+
+    /**
+     * Return a space, by its key
+     *
+     * @param spaceKey Key of the space
+     *
+     * @return info about the space
+    */
+    String deleteSpace(@NonNull String spaceKey) {
+        def spaceInfo = new SpaceInfo()
+        def errorCollector = new SimpleErrorCollection()
+        def queryParams = [:]
+        def spaces = [] as ArrayList<SpaceInfo>
+
+        def response = AppLink.doRequestWithoutBody("rest/api/space/${spaceKey}", Request.MethodType.DELETE)
+        if (response.statusCode == HttpURLConnection.HTTP_ACCEPTED) {
+            def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+            def uriToStatus = responseAsJson['links']['status']
+            return uriToStatus
+        }
+        return null
+    }
+
+    /**
+     * Check the status of a long-running task, like a deletion of a Confluence space.
+     *
+     * @return get() will true if the task is completed, false otherwhise
+    */
+    LongRunningTaskOutcome isLongTaskCompleted(@NonNull String pathToTask) {
+        def errorCollector = new SimpleErrorCollection()
+
+        def response = AppLink.doRequestWithoutBody(pathToTask, Request.MethodType.GET)
+        if (response.statusCode == HttpURLConnection.HTTP_OK) {
+            def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+            def percentComplete = responseAsJson['percentageComplete'] as Integer
+            def isSuccess = responseAsJson['successful'] as boolean
+            def messages = responseAsJson['successful'] as List<Map>
+            if (!isSuccess) {
+                messages.each { message ->
+                    errorCollector.addErrorMessage(message['translation'] as String)
+                }
+            }
+            if (percentComplete && percentComplete == 100) {
+                return new LongRunningTaskOutcome(errorCollector, null, isSuccess)
+            }
+        } else if (response.statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
+            errorCollector.addErrorMessage("Task ${pathToTask} not found")
+        }
+        return new LongRunningTaskOutcome(errorCollector, null, false)
     }
 
     /**
@@ -236,6 +286,41 @@ class SpaceUtils {
 
         public SpaceInfo get() {
             return this.spaceInfo
+        }
+
+        public ErrorCollection getErrorCollection() {
+            return this.errorCollection
+        }
+
+        public WarningCollection getWarningCollection() {
+            return this.warningCollection
+        }
+
+        public boolean isValid() {
+            return (errorCollection && !errorCollection.hasAnyErrors())? true: false
+        }
+
+        public boolean hasWarnings() {
+            return (warningCollection && warningCollection.hasAnyWarnings())? true: false
+        }
+    }
+
+    class LongRunningTaskOutcome implements ServiceOutcome {
+        protected ErrorCollection errorCollection
+        protected WarningCollection warningCollection
+        protected boolean isComplete
+
+        public LongRunningTaskOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, boolean isComplete) {
+            this.errorCollection = errorCollection
+            this.warningCollection = warningCollection
+        }
+
+        public boolean getReturnedValue() {
+            return this.isComplete
+        }
+
+        public boolean get() {
+            return this.isComplete
         }
 
         public ErrorCollection getErrorCollection() {
