@@ -164,6 +164,44 @@ class SpaceUtils {
         return null
     }
 
+    SpaceOutcome archiveSpace(@NonNull String spaceKey) {
+        def spaceInfo = getSpace(spaceKey).get()
+        def errorCollector = new SimpleErrorCollection()
+
+        if (spaceInfo.status == SpaceStatus.ARCHIVED) {
+            errorCollector.addErrorMessage("Space ${spaceKey} is already archived")
+        } else {
+            def requestBody = [jsonrpc: "2.0", method: "setSpaceStatus", params: [spaceKey, SpaceStatus.ARCHIVED.value], id: 1]
+            def statusResponse = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
+            def statusResponseAsJson = new JsonSlurper().parseText(statusResponse.responseBodyAsString) as Map
+            def isSuccess = statusResponseAsJson['result'] as boolean
+            if (isSuccess) {
+                spaceInfo.setStatus(SpaceStatus.ARCHIVED)
+            }
+        }
+        
+        return new SpaceOutcome(errorCollector, null, spaceInfo)
+    }
+
+    SpaceOutcome restoreSpace(@NonNull String spaceKey) {
+        def spaceInfo = getSpace(spaceKey).get()
+        def errorCollector = new SimpleErrorCollection()
+
+        if (spaceInfo.status != SpaceStatus.ARCHIVED) {
+            errorCollector.addErrorMessage("Space ${spaceKey} is already restored")
+        } else {
+            def requestBody = [jsonrpc: "2.0", method: "setSpaceStatus", params: [spaceKey, SpaceStatus.CURRENT.value], id: 1]
+            def statusResponse = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
+            def statusResponseAsJson = new JsonSlurper().parseText(statusResponse.responseBodyAsString) as Map
+            def isSuccess = statusResponseAsJson['result'] as boolean
+            if (isSuccess) {
+                spaceInfo.setStatus(SpaceStatus.CURRENT)
+            }            
+        }
+        
+        return new SpaceOutcome(errorCollector, null, spaceInfo)
+    }
+
     /**
      * Check the status of a long-running task, like a deletion of a Confluence space.
      *
