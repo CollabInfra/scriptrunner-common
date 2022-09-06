@@ -16,6 +16,8 @@ import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.crowd.embedded.api.Group
 import common.confluence.AppLink
 import groovy.util.logging.Log4j
+import common.confluence.enums.SpaceStatus
+import common.confluence.enums.SpaceType
 
 @Log4j
 class SpaceUtils {
@@ -74,7 +76,7 @@ class SpaceUtils {
             queryParams.put("status", spaceStatus.value)
         }
         if (spaceType) {
-            queryParams.put("type", spaceType.value)
+            queryParams.put("type", spaceType.type)
         }
         if (spacesKey) {
             def counter = 1
@@ -123,11 +125,20 @@ class SpaceUtils {
             spaceInfo.setId(responseAsJson['id'] as Integer)
             spaceInfo.setName(responseAsJson['name'] as String)
             spaceInfo.setKey(responseAsJson['key'] as String)
+            def spaceType = responseAsJson['type'] as String
+            spaceInfo.setType(SpaceType.valueOfType(spaceType))
             spaceInfo.setDescription(responseAsJson['description']['plain']['value'] as String)
             def homePageMap = responseAsJson['homepage'] as Map
             def homePage = [id: homePageMap['id'], title: homePageMap['title'], link: homePageMap['_links']['webui']]
             spaceInfo.setHomePage(homePage)
+
+            def requestBody = [jsonrpc: "2.0", method: "getSpaceStatus", params: [spaceKey], id: 1]
+            def statusResponse = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)
+            def statusResponseAsJson = new JsonSlurper().parseText(statusResponse.responseBodyAsString) as Map
+            def status = statusResponseAsJson['result'] as String
+            spaceInfo.setStatus(SpaceStatus.valueOf(status))
         }
+
         return new SpaceOutcome(errorCollector, null, spaceInfo)
     }
 
@@ -214,52 +225,6 @@ class SpaceUtils {
         return admins
     }
 
-    enum SpaceType {
-        GLOBAL('global'),
-        PERSONAL('personal')
-
-        final String value
-
-        SpaceType(String value) {
-            this.value = value
-        }
-
-        String getValue() {
-            return this.value
-        }
-
-        String toString(){
-            value
-        }
-
-        String getKey() {
-            name()
-        }
-    }
-
-    enum SpaceStatus {
-        CURRENT('current'),
-        ARCHIVED('archived')
-
-        final String value
-
-        SpaceStatus(String value) {
-            this.value = value
-        }
-
-        String getValue() {
-            return this.value
-        }
-
-        String toString(){
-            value
-        }
-
-        String getKey() {
-            name()
-        }
-    }
-
     class SpaceInfo {
         String name
         String key
@@ -267,6 +232,8 @@ class SpaceUtils {
         String description
         Map homePage
         Integer id
+        SpaceStatus status
+        SpaceType type
     }
 
     class SpaceOutcome implements ServiceOutcome {
@@ -308,18 +275,18 @@ class SpaceUtils {
     class LongRunningTaskOutcome implements ServiceOutcome {
         protected ErrorCollection errorCollection
         protected WarningCollection warningCollection
-        protected boolean isComplete
+        protected Boolean isComplete
 
-        public LongRunningTaskOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, boolean isComplete) {
+        public LongRunningTaskOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Boolean isComplete) {
             this.errorCollection = errorCollection
             this.warningCollection = warningCollection
         }
 
-        public boolean getReturnedValue() {
+        public Boolean getReturnedValue() {
             return this.isComplete
         }
 
-        public boolean get() {
+        public Boolean get() {
             return this.isComplete
         }
 
@@ -341,3 +308,4 @@ class SpaceUtils {
     }
 
 }
+
