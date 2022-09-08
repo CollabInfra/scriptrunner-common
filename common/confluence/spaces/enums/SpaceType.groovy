@@ -1,4 +1,4 @@
-package common.confluence.enums
+package common.confluence.spaces.enums
 
 enum SpaceType {
     GLOBAL('global'),

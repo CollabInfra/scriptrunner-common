@@ -1,4 +1,4 @@
-package common.confluence
+package common.confluence.spaces
 
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
@@ -7,17 +7,15 @@ import com.atlassian.sal.api.net.Response
 import org.springframework.lang.NonNull
 import com.atlassian.jira.user.ApplicationUser
 import groovy.json.JsonBuilder
-import com.atlassian.jira.util.SimpleWarningCollection
-import com.atlassian.jira.util.WarningCollection
 import com.atlassian.jira.util.ErrorCollection
 import com.atlassian.jira.util.SimpleErrorCollection
-import com.atlassian.jira.bc.ServiceOutcome
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.crowd.embedded.api.Group
 import common.confluence.AppLink
 import groovy.util.logging.Log4j
-import common.confluence.enums.SpaceStatus
-import common.confluence.enums.SpaceType
+import common.confluence.LongRunningTaskOutcome
+import common.confluence.spaces.enums.SpaceStatus
+import common.confluence.spaces.enums.SpaceType
 
 @Log4j
 class SpaceUtils {
@@ -261,88 +259,6 @@ class SpaceUtils {
             }
         }
         return admins
-    }
-
-    class SpaceInfo {
-        String name
-        String key
-        List<ApplicationUser> admins
-        String description
-        Map homePage
-        Integer id
-        SpaceStatus status
-        SpaceType type
-    }
-
-    class SpaceOutcome implements ServiceOutcome {
-        protected ErrorCollection errorCollection
-        protected WarningCollection warningCollection
-        protected SpaceInfo spaceInfo
-
-        public SpaceOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, SpaceInfo spaceInfo) {
-            this.errorCollection = errorCollection
-            this.warningCollection = warningCollection
-            this.spaceInfo = spaceInfo
-        }
-
-        public SpaceInfo getReturnedValue() {
-            return this.spaceInfo
-        }
-
-        public SpaceInfo get() {
-            return this.spaceInfo
-        }
-
-        public ErrorCollection getErrorCollection() {
-            return this.errorCollection
-        }
-
-        public WarningCollection getWarningCollection() {
-            return this.warningCollection
-        }
-
-        public boolean isValid() {
-            return (errorCollection && !errorCollection.hasAnyErrors())? true: false
-        }
-
-        public boolean hasWarnings() {
-            return (warningCollection && warningCollection.hasAnyWarnings())? true: false
-        }
-    }
-
-    class LongRunningTaskOutcome implements ServiceOutcome {
-        protected ErrorCollection errorCollection
-        protected WarningCollection warningCollection
-        protected Boolean isComplete
-
-        public LongRunningTaskOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Boolean isComplete) {
-            this.errorCollection = errorCollection
-            this.warningCollection = warningCollection
-        }
-
-        public Boolean getReturnedValue() {
-            return this.isComplete
-        }
-
-        public Boolean get() {
-            return this.isComplete
-        }
-
-        public ErrorCollection getErrorCollection() {
-            return this.errorCollection
-        }
-
-        public WarningCollection getWarningCollection() {
-            return this.warningCollection
-        }
-
-        public boolean isValid() {
-            return (errorCollection && !errorCollection.hasAnyErrors())? true: false
-        }
-
-        public boolean hasWarnings() {
-            return (warningCollection && warningCollection.hasAnyWarnings())? true: false
-        }
     }
 
 }

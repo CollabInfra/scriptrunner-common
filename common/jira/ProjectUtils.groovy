@@ -14,7 +14,6 @@ import com.atlassian.jira.security.roles.ProjectRoleManager
 import com.atlassian.jira.security.roles.ProjectRole
 import com.atlassian.jira.bc.projectroles.ProjectRoleService
 import com.atlassian.jira.security.roles.ProjectRoleActor
-import com.atlassian.jira.bc.ServiceOutcome
 import com.atlassian.jira.util.SimpleWarningCollection
 import com.atlassian.jira.util.WarningCollection
 import com.atlassian.crowd.embedded.api.Group
@@ -132,42 +131,6 @@ public class ProjectUtils {
             }
         }
         return users
-    }
-
-    class CreateProjectOutcome implements ServiceOutcome {
-        protected ErrorCollection errorCollection
-        protected WarningCollection warningCollection
-        protected Project project
-
-        public CreateProjectOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Project project) {
-            this.errorCollection = errorCollection
-            this.warningCollection = warningCollection
-            this.project = project
-        }
-
-        public Project getReturnedValue() {
-            return this.project
-        }
-
-        public Project get() {
-            return this.project
-        }
-
-        public ErrorCollection getErrorCollection() {
-            return this.errorCollection
-        }
-
-        public WarningCollection getWarningCollection() {
-            return this.warningCollection
-        }
-
-        public boolean isValid() {
-            return (errorCollection && !errorCollection.hasAnyErrors())? true: false
-        }
-
-        public boolean hasWarnings() {
-            return (warningCollection && warningCollection.hasAnyWarnings())? true: false
-        }
     }
 
 }
