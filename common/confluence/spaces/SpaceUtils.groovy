@@ -14,8 +14,7 @@ import com.atlassian.crowd.embedded.api.Group
 import common.confluence.AppLink
 import groovy.util.logging.Log4j
 import common.confluence.LongRunningTaskOutcome
-import common.confluence.spaces.enums.SpaceStatus
-import common.confluence.spaces.enums.SpaceType
+import common.confluence.spaces.enums.*
 
 @Log4j
 class SpaceUtils {
@@ -198,6 +197,91 @@ class SpaceUtils {
         }
         
         return new SpaceOutcome(errorCollector, null, spaceInfo)
+    }
+
+    void removeAllPermissionsForAnonymous(@NonNull String spaceKey) {
+        EnumSet.allOf(SpacePermission.class).each { permission ->
+            removeSpacePermissionForAnonymous(spaceKey, permission)
+        }
+    }
+
+    boolean removeSpacePermissionForAnonymous(@NonNull String spaceKey, @NonNull SpacePermission permission) {
+        def isSuccess = false
+        def requestBody = [jsonrpc: "2.0", method: "removeAnonymousPermissionFromSpace", params: [permission.value, spaceKey], id: 1]
+        def response = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
+        def responseAsMap = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+        isSuccess = responseAsMap["result"] as boolean
+        return isSuccess
+    }
+
+    /*
+     * Extra protection: if you try add to anonymous as a space admin or exporter,
+     * it will not be added.
+    */
+    boolean addSpacePermissionForAnonymous(@NonNull String spaceKey, @NonNull SpacePermission permission) {
+        def isSuccess = false
+        if (!permission.equals(SpacePermission.SPACE_ADMIN) && !permission.equals(SpacePermission.SPACE_EXPORT)) {
+            def requestBody = [jsonrpc: "2.0", method: "addAnonymousPermissionToSpace", params: [permission.value, spaceKey], id: 1]
+            def response = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
+            def responseAsMap = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+            isSuccess = responseAsMap["result"] as boolean
+            return isSuccess
+        }
+        return isSuccess
+    }
+
+    void addPermissionsToSpace(@NonNull String spaceKey, @NonNull SpacePermission... permissions, @NonNull String userOrGroupName) {
+        permissions.each { permission ->
+            addPermissionToSpace(spaceKey, permission, userOrGroupName)
+
+        }
+    }
+
+    boolean addPermissionToSpace(@NonNull String spaceKey, @NonNull SpacePermission permission, @NonNull String userOrGroupName) {
+        def isSuccess = false
+        def requestBody = [jsonrpc: "2.0", method: "addPermissionToSpace", params: [permission.value, userOrGroupName, spaceKey], id: 1]
+        def response = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
+        def responseAsMap = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+        isSuccess = responseAsMap["result"] as boolean
+        return isSuccess
+    }
+
+    boolean removePermissionForSpace(@NonNull String spaceKey, @NonNull SpacePermission permission, @NonNull String userOrGroupName) {
+        def isSuccess = false
+        def requestBody = [jsonrpc: "2.0", method: "removePermissionFromSpace", params: [permission.value, userOrGroupName, spaceKey], id: 1]
+        def response = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
+        def responseAsMap = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+        isSuccess = responseAsMap["result"] as boolean
+        return isSuccess
+    }
+
+    List<Map> getPermissionsFromSpace(@NonNull String spaceKey) {
+        def finalPermissionsList = [] as ArrayList<Map>
+
+        def requestBody = [jsonrpc: "2.0", method: "getSpacePermissionSets", params: [spaceKey], id: 1]
+        def response = AppLink.doRequestWithBody("rpc/json-rpc/confluenceservice-v2", new JsonBuilder(requestBody).toString(), Request.MethodType.POST)        
+        def responseAsMap = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+        def listOfPerms = responseAsMap['result'] as List<Map>
+        
+        listOfPerms.each { permissionSet ->
+            def users = [] as ArrayList<String>
+            def groups = [] as ArrayList<String>
+
+            def permission = SpacePermission.valueOfPermission(permissionSet['type'] as String)
+            def listOfResources = permissionSet['spacePermissions'] as List<Map>
+            listOfResources.each { resource ->
+            def userName = resource['userName'] as String
+                if (userName) {
+                    users.add(userName)
+                }
+                def groupName = resource['groupName'] as String
+                if (groupName) {
+                    groups.add(groupName)
+                }
+            }
+            finalPermissionsList.add(permission: permission, users: users, groups: groups)
+        }
+        return finalPermissionsList
     }
 
     /**
