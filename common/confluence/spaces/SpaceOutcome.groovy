@@ -7,19 +7,19 @@ import com.atlassian.jira.bc.ServiceOutcome
 class SpaceOutcome implements ServiceOutcome {
     protected ErrorCollection errorCollection
     protected WarningCollection warningCollection
-    protected SpaceInfo spaceInfo
+    protected Space spaceInfo
 
-    public SpaceOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, SpaceInfo spaceInfo) {
+    public SpaceOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Space spaceInfo) {
         this.errorCollection = errorCollection
         this.warningCollection = warningCollection
         this.spaceInfo = spaceInfo
     }
 
-    public SpaceInfo getReturnedValue() {
+    public Space getReturnedValue() {
         return this.spaceInfo
     }
 
-    public SpaceInfo get() {
+    public Space get() {
         return this.spaceInfo
     }
 

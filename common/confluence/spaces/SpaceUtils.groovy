@@ -23,7 +23,7 @@ class SpaceUtils {
 
     SpaceOutcome createSpace(@NonNull String spaceKey, @NonNull String spaceName, @NonNull List<ApplicationUser> spaceAdmins, String description) {
         def errorCollector = new SimpleErrorCollection()
-        def spaceInfo = new SpaceInfo()
+        def spaceInfo = new Space()
 
         def requestBody = [key: spaceKey, name: spaceName]
         if (description) {
@@ -109,10 +109,10 @@ class SpaceUtils {
      * @return info about the space
     */
     SpaceOutcome getSpace(@NonNull String spaceKey) {
-        def spaceInfo = new SpaceInfo()
+        def spaceInfo = new Space()
         def errorCollector = new SimpleErrorCollection()
         def queryParams = [:]
-        def spaces = [] as ArrayList<SpaceInfo>
+        def spaces = [] as ArrayList<Space>
         
         def response = AppLink.doRequestWithoutBody("rest/api/space/${spaceKey}?expand=homepage,description.plain", Request.MethodType.GET)
         if (response.statusCode != HttpURLConnection.HTTP_OK) {
@@ -147,10 +147,10 @@ class SpaceUtils {
      * @return info about the space
     */
     String deleteSpace(@NonNull String spaceKey) {
-        def spaceInfo = new SpaceInfo()
+        def spaceInfo = new Space()
         def errorCollector = new SimpleErrorCollection()
         def queryParams = [:]
-        def spaces = [] as ArrayList<SpaceInfo>
+        def spaces = [] as ArrayList<Space>
 
         def response = AppLink.doRequestWithoutBody("rest/api/space/${spaceKey}", Request.MethodType.DELETE)
         if (response.statusCode == HttpURLConnection.HTTP_ACCEPTED) {

@@ -4,7 +4,7 @@ import common.confluence.spaces.enums.SpaceStatus
 import common.confluence.spaces.enums.SpaceType
 import com.atlassian.jira.user.ApplicationUser
 
-class SpaceInfo {
+class Space {
     String name
     String key
     List<ApplicationUser> admins
