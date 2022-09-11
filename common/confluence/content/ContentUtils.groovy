@@ -34,6 +34,18 @@ class ContentUtils {
         return listOfContent 
     }
 
+    List<ContentOutcome> getComments(@NonNull Content contentDetails) {
+        getChildren(contentDetails, ContentType.COMMENT)
+    }
+
+    List<ContentOutcome> getChildrenPages(@NonNull Content contentDetails) {
+        getChildren(contentDetails, ContentType.PAGE)
+    }
+
+    List<ContentOutcome> getAttachments(@NonNull Content contentDetails) {
+        getChildren(contentDetails, ContentType.ATTACHMENT)
+    }
+
     protected List<Content> getContent(@NonNull ContentType contentType, String spaceKey, String pageTitle, ContentStatus contentStatus, String blogPostingDay) {
         def listOfContent = [] as ArrayList<Content>
 
@@ -62,36 +74,6 @@ class ContentUtils {
         }
     
         return listOfContent
-    }
-
-    protected Content parseContentResponse(Map result) {
-        def content = new Content()
-        
-        content.title = result['title'] as String
-        content.id = result['id'] as Integer
-        content.type = ContentType.valueOfType(result['type'] as String)
-        content.status = ContentStatus.valueOfStatus(result['status'] as String)
-        content.bodyContent = result['body']['storage']['value'] as String
-
-        def ancestors = result['ancestors'] as List<Map>
-        if (ancestors.size() > 0) {
-            content.parentId = ancestors[ancestors.size() - 1]['id'] as Integer
-        }
-        
-        def spaceInfo = new Space()
-        spaceInfo.key = result['space']['key'] as String
-        spaceInfo.name = result['space']['name'] as String
-        spaceInfo.id = result['space']['id'] as Integer
-        spaceInfo.type = SpaceType.valueOfType(result['space']['id'] as String)
-        content.space = spaceInfo
-
-        def version = new Content.Version(content)
-        version.number = result['version']['number'] as Integer
-        version.userName = result['version']['by']['username'] as String
-        version.when = LocalDate.parse(result['version']['when'] as String, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        content.version = version
-
-        return content
     }
 
     Content getContentById(@NonNull Integer contentId, ContentStatus... statuses) {
@@ -269,11 +251,65 @@ class ContentUtils {
         return new ContentOutcome(errorCollector, null, contentDetails)
     }
 
+    Map getRestrictionsForContent(@NonNull Content contentDetails) {
+        def listOfRestrictions = [:] as Map
+        def errorCollector = new SimpleErrorCollection()
+
+        def response = AppLink.doRequestWithoutBody("rest/api/content/${contentDetails.id}/restriction/byOperation", Request.MethodType.GET)
+        switch (response.statusCode) {
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                errorCollector.addErrorMessage("Content not found for id ${contentDetails.id}", Reason.NOT_FOUND)
+                break
+            case HttpURLConnection.HTTP_OK:
+                def readUsers = [] as List<Map>
+                def writeUsers = [] as List<Map>
+                def readGroups = [] as List<Map>
+                def writeGroups = [] as List<Map>
+
+                def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+                def readRestrictions = responseAsJson['read']['restrictions']
+
+                def users = readRestrictions['user']['results'] as List<Map>
+                users.each { user ->
+                    readUsers.add(type: user['type'], username: user['username'])
+                }
+
+                def groups = readRestrictions['group']['results'] as List<Map>
+                groups.each { group ->
+                    readGroups.add(type: group['type'], name: group['name'])
+                }
+
+                def writeRestrictions = responseAsJson['update']['restrictions']
+
+                users = writeRestrictions['user']['results'] as List<Map>
+                users.each { user ->
+                    writeUsers.add(type: user['type'], username: user['username'])
+                }
+
+                groups = writeRestrictions['group']['results'] as List<Map>
+                groups.each { group ->
+                    writeGroups.add(type: group['type'], name: group['name'])
+                }
+
+                listOfRestrictions.read = [users: readUsers, groups: readGroups]
+                listOfRestrictions.write = [users: writeUsers, groups: writeGroups]
+
+                break
+            default:
+                errorCollector.addErrorMessage("Unexpected status code: ${response.statusCode}, response body is ${response.responseBodyAsString}")
+        }
+
+        listOfRestrictions.errorCollection = errorCollector
+
+        return listOfRestrictions
+    }
+
     protected List<ContentOutcome> getChildren(@NonNull Content contentDetails, @NonNull ContentType childType) {
         def errorCollector = new SimpleErrorCollection()
         def listOfOutcomes = [] as ArrayList<ContentOutcome>
 
         def response = AppLink.doRequestWithoutBody("rest/api/content/${contentDetails.id}/child/${childType.value}?expand=version,space,body.storage,body.view,ancestors", Request.MethodType.GET)
+        
         switch (response.statusCode) {
             case HttpURLConnection.HTTP_NOT_FOUND:
                 // Returned if there is no content with the given id
@@ -286,8 +322,6 @@ class ContentUtils {
                 if (resultSize > 0) {
                     def results = responseAsJson['results'] as List<Map>
                     results.each { result ->
-                        log.warn result
-
                         listOfOutcomes.add(new ContentOutcome(errorCollector, null, parseContentResponse(result)))
                     }
                 }                
@@ -300,15 +334,34 @@ class ContentUtils {
         return listOfOutcomes
     }
 
-    List<ContentOutcome> getComments(@NonNull Content contentDetails) {
-        getChildren(contentDetails, ContentType.COMMENT)
+    protected Content parseContentResponse(Map result) {
+        def content = new Content()
+
+        content.title = result['title'] as String
+        content.id = result['id'] as Integer
+        content.type = ContentType.valueOfType(result['type'] as String)
+        content.status = ContentStatus.valueOfStatus(result['status'] as String)
+        content.bodyContent = result['body']['storage']['value'] as String
+
+        def ancestors = result['ancestors'] as List<Map>
+        if (ancestors.size() > 0) {
+            content.parentId = ancestors[ancestors.size() - 1]['id'] as Integer
+        }
+
+        def spaceInfo = new Space()
+        spaceInfo.key = result['space']['key'] as String
+        spaceInfo.name = result['space']['name'] as String
+        spaceInfo.id = result['space']['id'] as Integer
+        spaceInfo.type = SpaceType.valueOfType(result['space']['id'] as String)
+        content.space = spaceInfo
+
+        def version = new Content.Version(content)
+        version.number = result['version']['number'] as Integer
+        version.userName = result['version']['by']['username'] as String
+        version.when = LocalDate.parse(result['version']['when'] as String, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        content.version = version
+
+        return content
     }
 
-    List<ContentOutcome> getChildrenPages(@NonNull Content contentDetails) {
-        getChildren(contentDetails, ContentType.PAGE)
-    }
-
-    List<ContentOutcome> getAttachments(@NonNull Content contentDetails) {
-        getChildren(contentDetails, ContentType.ATTACHMENT)
-    }
 }
