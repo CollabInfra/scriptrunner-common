@@ -1,4 +1,4 @@
-package common.confluence.content.enums
+package common.confluence.dc.content.enums
 
 enum ContentStatus {
     CURRENT('current'),

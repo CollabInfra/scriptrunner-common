@@ -1,15 +1,15 @@
-package common.confluence.content
+package common.confluence.dc.content
 
 import groovy.util.logging.Log4j
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import com.atlassian.sal.api.net.Request
 import com.atlassian.sal.api.net.Response
-import common.confluence.AppLink
-import common.confluence.content.enums.*
+import common.confluence.dc.AppLink
+import common.confluence.dc.content.enums.*
 import org.springframework.lang.NonNull
-import common.confluence.spaces.Space
-import common.confluence.spaces.enums.SpaceType
+import common.confluence.dc.spaces.Space
+import common.confluence.dc.spaces.enums.SpaceType
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.atlassian.jira.util.ErrorCollection
@@ -302,6 +302,70 @@ class ContentUtils {
         listOfRestrictions.errorCollection = errorCollector
 
         return listOfRestrictions
+    }
+
+    void addLabelsToContent(@NonNull Content contentDetails, @NonNull LabelPrefix prefix, String... labelsName) {
+        def bodyParams = [] as List<Map>
+        labelsName.each { labelName ->
+            bodyParams.add([name: labelName, type: prefix.value])
+        }
+
+        def response = AppLink.doRequestWithBody("rest/api/content/${contentDetails.id}/label", new JsonBuilder(bodyParams[0]).toString(), Request.MethodType.POST)
+        switch (response.statusCode) {
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                //errorCollector.addErrorMessage("Content not found for id ${contentDetails.id}", Reason.NOT_FOUND)
+                break
+            case HttpURLConnection.HTTP_OK:
+                break
+            default:
+                log.warn response.statusCode
+                log.warn response.responseBodyAsString
+                break
+        }
+    }
+
+    boolean deleteLabelOnContent(@NonNull Content contentDetails, @NonNull Label label) {
+        def isSuccess = false
+        def response = AppLink.doRequestWithoutBody("rest/api/content/${contentDetails.id}/label?name=${label.name}", Request.MethodType.DELETE)
+        switch (response.statusCode) {
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                //errorCollector.addErrorMessage("Content not found for id ${contentDetails.id}", Reason.NOT_FOUND)
+                break
+            case HttpURLConnection.HTTP_NO_CONTENT:
+                isSuccess = true
+                break
+            default:
+                log.warn response.statusCode
+                log.warn response.responseBodyAsString
+                break
+        }
+        return isSuccess
+    }
+
+    List<Label> getLabelsForContent(@NonNull Content contentDetails) {
+        def listOfLabels = [] as List<Label>
+
+        def response = AppLink.doRequestWithoutBody("rest/api/content/${contentDetails.id}/label", Request.MethodType.GET)
+        switch (response.statusCode) {
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                //errorCollector.addErrorMessage("Content not found for id ${contentDetails.id}", Reason.NOT_FOUND)
+                break
+            case HttpURLConnection.HTTP_OK:
+                def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+                def labelsList = responseAsJson['results'] as List<Map>
+                labelsList.each { labelFromServer ->
+                    def label = new Label()
+                    label.id = labelFromServer['id'] as Integer
+                    label.name = labelFromServer['name'] as String
+                    label.prefix = LabelPrefix.valueOfPrefix(labelFromServer['prefix'] as String)
+                    listOfLabels.add(label)
+                }
+                break
+            default:
+                break
+        }
+
+        return listOfLabels
     }
 
     protected List<ContentOutcome> getChildren(@NonNull Content contentDetails, @NonNull ContentType childType) {

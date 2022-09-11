@@ -1,4 +1,4 @@
-package common.confluence.spaces.enums
+package common.confluence.dc.spaces.enums
 
 enum SpacePermission {
     VIEW('VIEWSPACE'),

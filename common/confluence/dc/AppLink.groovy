@@ -1,4 +1,4 @@
-package common.confluence
+package common.confluence.dc
 
 import com.atlassian.applinks.api.ApplicationLink
 import com.atlassian.applinks.api.ApplicationLinkService

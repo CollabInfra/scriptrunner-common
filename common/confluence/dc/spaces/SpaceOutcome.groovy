@@ -1,25 +1,26 @@
-package common.confluence
+package common.confluence.dc.spaces
 
 import com.atlassian.jira.util.WarningCollection
 import com.atlassian.jira.util.ErrorCollection
 import com.atlassian.jira.bc.ServiceOutcome
 
-class LongRunningTaskOutcome implements ServiceOutcome {
+class SpaceOutcome implements ServiceOutcome {
     protected ErrorCollection errorCollection
     protected WarningCollection warningCollection
-    protected Boolean isComplete
+    protected Space spaceInfo
 
-    public LongRunningTaskOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Boolean isComplete) {
+    public SpaceOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Space spaceInfo) {
         this.errorCollection = errorCollection
         this.warningCollection = warningCollection
+        this.spaceInfo = spaceInfo
     }
 
-    public Boolean getReturnedValue() {
-        return this.isComplete
+    public Space getReturnedValue() {
+        return this.spaceInfo
     }
 
-    public Boolean get() {
-        return this.isComplete
+    public Space get() {
+        return this.spaceInfo
     }
 
     public ErrorCollection getErrorCollection() {

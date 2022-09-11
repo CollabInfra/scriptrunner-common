@@ -1,4 +1,4 @@
-package common.confluence.spaces
+package common.confluence.dc.spaces
 
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
@@ -11,10 +11,10 @@ import com.atlassian.jira.util.ErrorCollection
 import com.atlassian.jira.util.SimpleErrorCollection
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.crowd.embedded.api.Group
-import common.confluence.AppLink
+import common.confluence.dc.AppLink
 import groovy.util.logging.Log4j
-import common.confluence.LongRunningTaskOutcome
-import common.confluence.spaces.enums.*
+import common.confluence.dc.LongRunningTaskOutcome
+import common.confluence.dc.spaces.enums.*
 
 @Log4j
 class SpaceUtils {

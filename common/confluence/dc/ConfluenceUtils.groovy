@@ -1,4 +1,4 @@
-package common.confluence
+package common.confluence.dc
 
 import groovy.util.logging.Log4j
 import groovy.json.JsonBuilder

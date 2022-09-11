@@ -1,7 +1,7 @@
-package common.confluence.content
+package common.confluence.dc.content
 
-import common.confluence.content.enums.*
-import common.confluence.spaces.Space
+import common.confluence.dc.content.enums.*
+import common.confluence.dc.spaces.Space
 import java.time.LocalDate
 
 class Content {

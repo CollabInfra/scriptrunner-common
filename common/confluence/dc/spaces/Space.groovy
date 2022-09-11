@@ -1,7 +1,6 @@
-package common.confluence.spaces
+package common.confluence.dc.spaces
 
-import common.confluence.spaces.enums.SpaceStatus
-import common.confluence.spaces.enums.SpaceType
+import common.confluence.dc.spaces.enums.*
 import com.atlassian.jira.user.ApplicationUser
 
 class Space {

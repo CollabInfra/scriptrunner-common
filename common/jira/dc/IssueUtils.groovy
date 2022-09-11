@@ -1,4 +1,4 @@
-package common.jira
+package common.jira.dc
 
 import com.atlassian.jira.component.ComponentAccessor
 import com.atlassian.jira.bc.issue.search.SearchService

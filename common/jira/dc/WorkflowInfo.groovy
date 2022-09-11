@@ -1,4 +1,4 @@
-package common.jira
+package common.jira.dc
 
 import com.atlassian.jira.workflow.JiraWorkflow
 

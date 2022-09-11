@@ -1,27 +1,26 @@
-package common.jira
+package common.confluence.dc.content
 
-import com.atlassian.jira.util.ErrorCollection
-import com.atlassian.jira.project.Project
 import com.atlassian.jira.util.WarningCollection
+import com.atlassian.jira.util.ErrorCollection
 import com.atlassian.jira.bc.ServiceOutcome
 
-class CreateProjectOutcome implements ServiceOutcome {
+class ContentOutcome implements ServiceOutcome {
     protected ErrorCollection errorCollection
     protected WarningCollection warningCollection
-    protected Project project
+    protected Content contentDetails
 
-    public CreateProjectOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Project project) {
+    public ContentOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Content contentDetails) {
         this.errorCollection = errorCollection
         this.warningCollection = warningCollection
-        this.project = project
+        this.contentDetails = contentDetails
     }
 
-    public Project getReturnedValue() {
-        return this.project
+    public Content getReturnedValue() {
+        return this.contentDetails
     }
 
-    public Project get() {
-        return this.project
+    public Content get() {
+        return this.contentDetails
     }
 
     public ErrorCollection getErrorCollection() {
