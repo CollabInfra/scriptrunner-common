@@ -217,4 +217,98 @@ class ContentUtils {
 
         return new ContentOutcome(errorCollector, null, contentDetails)
     }
+
+    /**
+     * If the content's status is "current", the content will be moved to the trash
+     * If the content's status is "trashed", the content will be purged
+     * If you wish to move the content to the trash and purge, call the methods two times, like this:
+     *     
+     * <pre>
+     * def createOutcome = utils.createContent("ds", "Allo", "Test page", ContentType.PAGE, null)
+     * def deleteOutcome = utils.deleteContent(createOutcome.get())
+     * if (deleteOutcome.isValid()) {
+     *   utils.deleteContent(deleteOutcome.get())
+     * }
+     * </pre>
+     * 
+    */
+    ContentOutcome deleteContent(@NonNull Content contentDetails) {
+        def errorCollector = new SimpleErrorCollection()
+        def uri = "rest/api/content/${contentDetails.id}"
+        def isPurge = false
+
+        if (contentDetails.status == ContentStatus.IN_TRASH) {
+            uri = uri + "?status=trashed"
+            isPurge = true
+        }
+
+        def response = AppLink.doRequestWithoutBody(uri, Request.MethodType.DELETE)
+
+        switch (response.statusCode) {
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                // Returned if there is no content with the given id, or if the calling user does not have permission to trash or purge the content.
+                def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+                errorCollector.addErrorMessage(responseAsJson['message'] as String, Reason.NOT_FOUND)
+                break
+            case HttpURLConnection.HTTP_CONFLICT:
+                // Returned if there is a stale data object conflict when trying to delete a draft
+                def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString) as Map
+                errorCollector.addErrorMessage(responseAsJson['message'] as String, Reason.CONFLICT)
+                break
+            case HttpURLConnection.HTTP_NO_CONTENT:
+                if (isPurge) {
+                    contentDetails = null
+                } else {
+                    contentDetails.status = ContentStatus.IN_TRASH
+                }
+                break
+            default:
+                errorCollector.addErrorMessage("Unexpected status code: ${response.statusCode}, response body is ${response.responseBodyAsString}")
+        }
+
+        return new ContentOutcome(errorCollector, null, contentDetails)
+    }
+
+    protected List<ContentOutcome> getChildren(@NonNull Content contentDetails, @NonNull ContentType childType) {
+        def errorCollector = new SimpleErrorCollection()
+        def listOfOutcomes = [] as ArrayList<ContentOutcome>
+
+        def response = AppLink.doRequestWithoutBody("rest/api/content/${contentDetails.id}/child/${childType.value}?expand=version,space,body.storage,body.view,ancestors", Request.MethodType.GET)
+        switch (response.statusCode) {
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                // Returned if there is no content with the given id
+                errorCollector.addErrorMessage("Content not found for id ${contentDetails.id}", Reason.NOT_FOUND)
+                listOfOutcomes.add(new ContentOutcome(errorCollector, null, null))
+                break
+            case HttpURLConnection.HTTP_OK:
+                def responseAsJson = new JsonSlurper().parseText(response.responseBodyAsString)
+                def resultSize = responseAsJson['size'] as Integer
+                if (resultSize > 0) {
+                    def results = responseAsJson['results'] as List<Map>
+                    results.each { result ->
+                        log.warn result
+
+                        listOfOutcomes.add(new ContentOutcome(errorCollector, null, parseContentResponse(result)))
+                    }
+                }                
+                break
+            default:
+                errorCollector.addErrorMessage("Unexpected status code: ${response.statusCode}, response body is ${response.responseBodyAsString}")
+                listOfOutcomes.add(new ContentOutcome(errorCollector, null, null))
+        }
+
+        return listOfOutcomes
+    }
+
+    List<ContentOutcome> getComments(@NonNull Content contentDetails) {
+        getChildren(contentDetails, ContentType.COMMENT)
+    }
+
+    List<ContentOutcome> getChildrenPages(@NonNull Content contentDetails) {
+        getChildren(contentDetails, ContentType.PAGE)
+    }
+
+    List<ContentOutcome> getAttachments(@NonNull Content contentDetails) {
+        getChildren(contentDetails, ContentType.ATTACHMENT)
+    }
 }

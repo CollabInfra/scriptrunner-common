@@ -2,7 +2,9 @@ package common.confluence.content.enums
 
 enum ContentType {
     PAGE('page'),
-    BLOG_POST('blogpost')
+    BLOG_POST('blogpost'),
+    COMMENT('comment'),
+    ATTACHMENT('attachment')
 
     private static final Map<String, ContentType> BY_TYPE = [:]
 
@@ -26,7 +28,6 @@ enum ContentType {
 
     String toString() {
         type
-
     }
 
     public static ContentType valueOfType(String type) {

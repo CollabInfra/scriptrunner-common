@@ -27,7 +27,6 @@ enum ContentStatus {
 
     String toString() {
         status
-
     }
 
     public static ContentStatus valueOfStatus(String status) {
