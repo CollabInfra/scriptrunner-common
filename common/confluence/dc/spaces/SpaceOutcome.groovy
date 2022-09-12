@@ -9,33 +9,33 @@ class SpaceOutcome implements ServiceOutcome {
     protected WarningCollection warningCollection
     protected Space spaceInfo
 
-    public SpaceOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Space spaceInfo) {
+    SpaceOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Space spaceInfo) {
         this.errorCollection = errorCollection
         this.warningCollection = warningCollection
         this.spaceInfo = spaceInfo
     }
 
-    public Space getReturnedValue() {
+    Space getReturnedValue() {
         return this.spaceInfo
     }
 
-    public Space get() {
+    Space get() {
         return this.spaceInfo
     }
 
-    public ErrorCollection getErrorCollection() {
+    ErrorCollection getErrorCollection() {
         return this.errorCollection
     }
 
-    public WarningCollection getWarningCollection() {
+    WarningCollection getWarningCollection() {
         return this.warningCollection
     }
 
-    public boolean isValid() {
+    boolean isValid() {
         return (errorCollection && !errorCollection.hasAnyErrors())? true: false
     }
 
-    public boolean hasWarnings() {
+    boolean hasWarnings() {
         return (warningCollection && warningCollection.hasAnyWarnings())? true: false
     }
 }

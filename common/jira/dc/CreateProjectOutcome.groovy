@@ -10,33 +10,33 @@ class CreateProjectOutcome implements ServiceOutcome {
     protected WarningCollection warningCollection
     protected Project project
 
-    public CreateProjectOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Project project) {
+    CreateProjectOutcome(ErrorCollection errorCollection, WarningCollection warningCollection, Project project) {
         this.errorCollection = errorCollection
         this.warningCollection = warningCollection
         this.project = project
     }
 
-    public Project getReturnedValue() {
+    Project getReturnedValue() {
         return this.project
     }
 
-    public Project get() {
+    Project get() {
         return this.project
     }
 
-    public ErrorCollection getErrorCollection() {
+    ErrorCollection getErrorCollection() {
         return this.errorCollection
     }
 
-    public WarningCollection getWarningCollection() {
+    WarningCollection getWarningCollection() {
         return this.warningCollection
     }
 
-    public boolean isValid() {
+    boolean isValid() {
         return (errorCollection && !errorCollection.hasAnyErrors())? true: false
     }
 
-    public boolean hasWarnings() {
+    boolean hasWarnings() {
         return (warningCollection && warningCollection.hasAnyWarnings())? true: false
     }
 }
