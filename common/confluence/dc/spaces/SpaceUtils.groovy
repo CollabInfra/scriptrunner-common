@@ -230,7 +230,7 @@ class SpaceUtils {
         return isSuccess
     }
 
-    void addPermissionsToSpace(@NonNull String spaceKey, @NonNull SpacePermission... permissions, @NonNull String userOrGroupName) {
+    void addPermissionsToSpace(@NonNull String spaceKey, @NonNull String userOrGroupName, @NonNull SpacePermission... permissions) {
         permissions.each { permission ->
             addPermissionToSpace(spaceKey, permission, userOrGroupName)
 
