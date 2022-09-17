@@ -1,7 +1,5 @@
 package tests.confluence.dc
 
-import com.onresolve.scriptrunner.canned.common.admin.SrSpecification
-
 import com.atlassian.jira.component.ComponentAccessor
 import common.confluence.dc.spaces.SpaceUtils
 import common.confluence.dc.ConfluenceUtils
@@ -10,12 +8,13 @@ import common.confluence.dc.content.Content
 import common.confluence.dc.content.enums.*
 import common.confluence.dc.content.Label
 import com.atlassian.jira.user.ApplicationUser
-import spock.lang.Shared
 import groovy.util.logging.Log4j
 import common.confluence.dc.spaces.SpaceOutcome
+import spock.lang.*
+import common.confluence.dc.spaces.Space
 
 @Log4j
-class ConfluenceSpecification extends SrSpecification {
+class ConfluenceSpecification extends Specification {
 
     @Shared
     SpaceUtils spaceUtils = new SpaceUtils()
@@ -23,17 +22,30 @@ class ConfluenceSpecification extends SrSpecification {
     @Shared
     ApplicationUser loggedUser = ComponentAccessor.getJiraAuthenticationContext().getLoggedInUser()
 
+    @Shared
+    Space spaceForTest
+
     def "test space creation"() {
-        setup: "create a Confluence where we will execute our tests"
+        given: "create a Confluence where we will execute our tests"
         def spaceName = "Space for unit test"
         def spaceKey = "UNITTEST"
         def spaceDescription = "This is a space created by a unit test"
 
         when: "We invoke this script"
-        SpaceOutcome outcome = spaceUtils.createSpace(spaceKey, spaceName, [loggedUser], spaceDescription)
+        def outcome = spaceUtils.createSpace(spaceKey, spaceName, [loggedUser], spaceDescription)
+        def isValid = outcome.isValid()
+        if (isValid) {
+            spaceForTest = outcome.get()
+        }
 
         then: "check the result"
-        true
+        isValid
+    }
+
+    def cleanupSpec(){
+        if (spaceForTest) {
+            spaceUtils.deleteSpace(spaceForTest.key)
+        }
     }
 
 }
